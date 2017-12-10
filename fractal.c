@@ -83,7 +83,7 @@ int main(int argc, char *argv[]) {
                endt = 1e-5;
                startt = endt;
             }
-            else if (strcmp(argv[1],"julia")==0) {
+            else if (strcmp(argv[1],"rotated")==0) {
                spot = MINISPIRALS;
                mode = 2;
             }

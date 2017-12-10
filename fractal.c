@@ -65,39 +65,34 @@ int main(int argc, char *argv[]) {
     switch (argc) {
         case 3:
             {
-                itermax = atoi(argv[2]);
+                if (strcmp(argv[2],"elephant")==0) {
+                    spot = ELEPHANT;
+                }
+                else if (strcmp(argv[2],"spirals")==0) {
+                    spot = MINISPIRALS;
+                }
+                else if (strcmp(argv[2],"tentacles")==0) {
+                    spot = TENTACLES;
+                }
+                else if (strcmp(argv[2],"still")==0) {
+                   spot = MINISPIRALS;
+                   endt = 1e-5;
+                   startt = endt;
+                }
             }
         case 2:
         {
-            if (strcmp(argv[1],"elephant")==0) {
-                spot = ELEPHANT;
-            }
-            else if (strcmp(argv[1],"spirals")==0) {
-                spot = MINISPIRALS;
-            }
-            else if (strcmp(argv[1],"tentacles")==0) {
-                spot = TENTACLES;
-            }
-            else if (strcmp(argv[1],"still")==0) {
-               spot = MINISPIRALS;
-               endt = 1e-5;
-               startt = endt;
-            }
-            else if (strcmp(argv[1],"rotated")==0) {
+            if (strcmp(argv[1],"rotated")==0) { // rotated mandelbrot
                spot = MINISPIRALS;
                mode = 2;
             }
-            else if (strcmp(argv[1],"ship")==0) {
+            else if (strcmp(argv[1],"ship")==0) { // burning ship
                spot = 4;
                mode = 3;
             }
-            else if (strcmp(argv[1],"random")==0) {
+            else if (strcmp(argv[1],"random")==0) { // a random fractal I came up with
                 spot = 5;
                 mode = 4;
-            }
-            else if (strcmp(argv[1],"carp")==0) {
-                spot = 5;
-                mode = 5;
             }
             else
                 spot = CENTER;
@@ -128,56 +123,43 @@ int main(int argc, char *argv[]) {
                 double complex c = cReal + cImag * I;
                 switch (mode)
                 {
-                default:
-                    {
-                        while(cabs(z0)< 2 && iter < itermax) {
-                            z0 = (z0*z0) + c;
-                            iter++;
-                        }
-                        break;
-                    }
-
-                case 5:
-                    {
-                        while (creal(z0) > 0 && cimag(z0) > 0 && iter < ITERMAX)
+                    case 4:
                         {
-                            if ((int)creal(z0) %  3 < 1 && (int)cimag(z0) % 3 < 1)
-                                iter = ITERMAX;
-                            z0 = creal(z0)/3 + cimag(z0)/3*I;
-                            iter++;
+                            while (cabs(z0) < 2 && iter < itermax) {
+                                z0 = cimag(z0)*cimag(z0) + creal(z0)*I;
+                                z0 = z0*z0*z0 + c;
+                                iter++;
+                            }
+                            break;
                         }
-                    }
-                    break;
-                case 4:
-                    {
-                        while (cabs(z0) < 2 && iter < itermax) {
-                            z0 = cimag(z0)*cimag(z0) + creal(z0)*I;
-                            z0 = z0*z0*z0 + c;
-                            iter++;
-                        }
-                        break;
-                    }
-                case 3:
-                    {
-                        while (cabs(z0) < 2 && iter < itermax)
+                    case 3:
                         {
-                            z0 = fabs(creal(z0)) + fabs(cimag(z0))*I;
-                            z0 = z0*z0 + c;
-                            iter++;
+                            while (cabs(z0) < 2 && iter < itermax)
+                            {
+                                z0 = fabs(creal(z0)) + fabs(cimag(z0))*I;
+                                z0 = z0*z0 + c;
+                                iter++;
+                            }
+                            break;
                         }
-                        break;
-                    }
 
-                case 2:
-                    {
-                        while (cabs(z0) < 2 && iter < itermax)
+                    case 2:
                         {
-                            z0 = z0*z0 + c*(1+-0.8*I); // this rotates the mandlebrot
-                            iter++;
+                            while (cabs(z0) < 2 && iter < itermax)
+                            {
+                                z0 = z0*z0 + c*(1+-0.8*I); // this rotates the mandlebrot
+                                iter++;
+                            }
+                            break;
                         }
-                        break;
-                    }
-
+                    default: // regular mandelbrot
+                        {
+                            while(cabs(z0)< 2 && iter < itermax) {
+                                z0 = (z0*z0) + c;
+                                iter++;
+                            }
+                            break;
+                        }
                 }
                 if (iter < ITERMAX)
                     putchar(syms[iter%symLength]);//33+iter%13

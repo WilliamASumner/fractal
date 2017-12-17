@@ -20,6 +20,9 @@
 #define ELEPHANT 1
 #define TENTACLES 2
 #define CENTER 3
+#define SHIP 4
+#define RANDOM 5
+#define SPIRAL 6
 
 // usage for command line arguments ./fractal.out PLACE WIDTH HEIGHT ITERMAX
 
@@ -39,7 +42,7 @@ int main(int argc, char *argv[]) {
     linescols = popen("tput cols;tput lines","r");
     fscanf(linescols,"%d %d",&cols,&lines);
     pclose(linescols);
-    double aspectRatio = (double) cols/lines;
+    double aspectRatio = (double) lines/cols;
 
     int spot = CENTER,width=cols/1.2,height=lines/1.2, keyval = 0;
     unsigned long wait = 50000;
@@ -55,11 +58,13 @@ int main(int argc, char *argv[]) {
     places[4][1] = 0.0;
     places[5][0] = -0.183995;
     places[5][1] = 0.95;
+    places[6][0] = -2.052465525;
+    places[6][1] = -0.007233462;
     char colors[7][9] = {WHITE,CYAN,BLUE,GREEN,YELLOW,RED,MAGENTA};
     char syms[] = ".oO";//"+-.o0&^=z@ua";
     int symLength= 3;
     int itermax = ITERMAX;
-    float startt = 1.0;
+    float startt = 8.0;
     float endt = 1e-14;
     double step = 0.9;
     double complex o = 0.0 + 0.0*I;
@@ -72,8 +77,11 @@ int main(int argc, char *argv[]) {
                 if (strcmp(argv[2],"elephant")==0) {
                     spot = ELEPHANT;
                 }
-                else if (strcmp(argv[2],"spirals")==0) {
+                else if (strcmp(argv[2],"minispirals")==0) {
                     spot = MINISPIRALS;
+                }
+                else if (strcmp(argv[2],"spiral")==0) {
+                    spot = SPIRAL;
                 }
                 else if (strcmp(argv[2],"tentacles")==0) {
                     spot = TENTACLES;
@@ -88,7 +96,7 @@ int main(int argc, char *argv[]) {
                 }
                 else {
                     printf("usage: ./prog.out fractal [location]\n");
-                    printf("possible locations include elephant, spirals, tentancles, still, or -i (for interactive)\n");
+                    printf("possible locations include elephant, minispirals, spiral, tentancles, still, or -i (for interactive)\n");
                     return 0;
                 }
             }
@@ -104,11 +112,11 @@ int main(int argc, char *argv[]) {
                mode = 2;
             }
             else if (strcmp(argv[1],"ship")==0) { // burning ship
-               spot = 4;
+               spot = SHIP;
                mode = 3;
             }
             else if (strcmp(argv[1],"random")==0) { // a random fractal I came up with
-                spot = 5;
+                spot = RANDOM;
                 mode = 4;
             }
             else {
@@ -188,33 +196,33 @@ int main(int argc, char *argv[]) {
         }
         if (interactive)
         {
-            if (keyval == 122)
+            printf("                                   \r");
+            if (keyval == 32)
                 printf("location: %.9lf, %.9lf\n",creal(o),cimag(o));
             keyval = getchar(); // get the next character
             switch (keyval)
             {
-                case 27:
-                    getchar(); // clear out the next value because it will not be needed
-                    int arrow = getchar();
-                    switch (arrow) //DACB 68 65 67 66
-                    {
-                        case 68: // left
-                            o -= t;
-                            break;
-                        case 65: // up
-                            o -= t*I;
-                            break;
-                        case 67: // right
-                            o += t;
-                            break;
-                        case 66: // down
-                            o += t*I;
-                            break;
-                    }
+                case 97: // left
+                    o -= t*0.1;
                     step = 1.0;
                     break;
-                case 32:
-                    step = 0.9;
+                case 119: // up
+                    o -= t*0.1*I;
+                    step = 1.0;
+                    break;
+                case 100: // right
+                    o += t*0.1;
+                    step = 1.0;
+                    break;
+                case 115: // down
+                    o += t*0.1*I;
+                    step = 1.0;
+                    break;
+                case 122: // z
+                    step = 0.5;
+                    break;
+                case 120: // x
+                    step = 2;
                     break;
                 default:
                     step = 1.0;

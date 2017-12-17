@@ -4,6 +4,7 @@
 #include <unistd.h>
 #include <math.h>
 #include <complex.h>
+#include <termios.h>
 
 #define WHITE   "\x1b[37m"
 #define RED     "\x1b[31m"
@@ -30,7 +31,6 @@
 // (0.088,0.654)                        - Triple Spiral
 // (1.108,0.230)                         - Scepter Varient
 // (0.1592,-1.0317) - Another Mandlebrot
-
 int main(int argc, char *argv[]) {
     double places[10][2];
     double ship[10][2];
@@ -41,7 +41,7 @@ int main(int argc, char *argv[]) {
     pclose(linescols);
     double aspectRatio = (double) cols/lines;
 
-    int spot,width=cols/1.2,height=lines/1.2;
+    int spot = CENTER,width=cols/1.2,height=lines/1.2, keyval = 0;
     unsigned long wait = 50000;
     places[0][0] = -0.21478559053;
     places[0][1] = 0.71359190450499;
@@ -56,12 +56,16 @@ int main(int argc, char *argv[]) {
     places[5][0] = -0.183995;
     places[5][1] = 0.95;
     char colors[7][9] = {WHITE,CYAN,BLUE,GREEN,YELLOW,RED,MAGENTA};
-    char syms[] = "+-.o0&^=z@ua";
-    int symLength= 12;
+    char syms[] = ".oO";//"+-.o0&^=z@ua";
+    int symLength= 3;
     int itermax = ITERMAX;
-    float startt = 3.0;
+    float startt = 1.0;
     float endt = 1e-14;
+    double step = 0.9;
+    double complex o = 0.0 + 0.0*I;
     int mode = 1;
+    int interactive = 0;
+
     switch (argc) {
         case 3:
             {
@@ -76,13 +80,26 @@ int main(int argc, char *argv[]) {
                 }
                 else if (strcmp(argv[2],"still")==0) {
                    spot = MINISPIRALS;
-                   endt = 1e-5;
-                   startt = endt;
+                   endt = startt;
+                }
+                else if (strcmp(argv[2],"-i")==0) {
+                    interactive = 1;
+                    endt = 1e-20;
+                }
+                else {
+                    printf("usage: ./prog.out fractal [location]\n");
+                    printf("possible locations include elephant, spirals, tentancles, still, or -i (for interactive)\n");
+                    return 0;
                 }
             }
         case 2:
         {
-            if (strcmp(argv[1],"rotated")==0) { // rotated mandelbrot
+            if (strcmp(argv[1],"mandelbrot")==0)
+            {
+                spot = ELEPHANT;
+                mode = 1;
+            }
+            else if (strcmp(argv[1],"rotated")==0) { // rotated mandelbrot
                spot = MINISPIRALS;
                mode = 2;
             }
@@ -94,19 +111,22 @@ int main(int argc, char *argv[]) {
                 spot = 5;
                 mode = 4;
             }
-            else
-                spot = CENTER;
+            else {
+                printf("usage: ./prog.out fractal [location]\n");
+                printf("possible options for fractals are mandelbrot, rotated, ship, or random.\n");
+                return 0;
+            }
             break;
         }
         default:
-            {
-                printf("usage: ./prog.out fractal [location]\n");
-                return 0;
-            }
+        {
+            printf("usage: ./prog.out fractal [location]\n");
+            return 0;
+        }
     }
 
     puts("\033[2J");
-    for (double t = startt; t >= endt; t*=0.9) {
+    for (double t = startt; t >= endt; t*=step) {
         puts("\033[1H");
         for (int i = 0; i < height; i++) {
             for (int k = 0; k < abs(cols-width)/2;k++)
@@ -116,14 +136,13 @@ int main(int argc, char *argv[]) {
             for (int j = 0; j < width;j++) {
                 double cReal = ((j - width*0.5)*t/width)*aspectRatio+places[spot][0];
                 double cImag = ((i - height*0.5)*t/height)*aspectRatio+places[spot][1];
-              //  printf("cr: %lf ci: %lf\n",cReal,cImag);
-                double x = 0.0, y = 0.0, xtemp;
                 int iter = 0;
                 double complex z0 = 0.0 + 0.0 * I;
                 double complex c = cReal + cImag * I;
+                c += o; // add the origin for interactivity purposes
                 switch (mode)
                 {
-                    case 4:
+                    case 4: // random fractal
                         {
                             while (cabs(z0) < 2 && iter < itermax) {
                                 z0 = cimag(z0)*cimag(z0) + creal(z0)*I;
@@ -132,7 +151,7 @@ int main(int argc, char *argv[]) {
                             }
                             break;
                         }
-                    case 3:
+                    case 3: // burning ship fractal
                         {
                             while (cabs(z0) < 2 && iter < itermax)
                             {
@@ -142,8 +161,7 @@ int main(int argc, char *argv[]) {
                             }
                             break;
                         }
-
-                    case 2:
+                    case 2: // rotated mandelbrot
                         {
                             while (cabs(z0) < 2 && iter < itermax)
                             {
@@ -168,7 +186,44 @@ int main(int argc, char *argv[]) {
             }
             putchar('\n');
         }
-        usleep(wait);
+        if (interactive)
+        {
+            if (keyval == 122)
+                printf("location: %.9lf, %.9lf\n",creal(o),cimag(o));
+            keyval = getchar(); // get the next character
+            switch (keyval)
+            {
+                case 27:
+                    getchar(); // clear out the next value because it will not be needed
+                    int arrow = getchar();
+                    switch (arrow) //DACB 68 65 67 66
+                    {
+                        case 68: // left
+                            o -= t;
+                            break;
+                        case 65: // up
+                            o -= t*I;
+                            break;
+                        case 67: // right
+                            o += t;
+                            break;
+                        case 66: // down
+                            o += t*I;
+                            break;
+                    }
+                    step = 1.0;
+                    break;
+                case 32:
+                    step = 0.9;
+                    break;
+                default:
+                    step = 1.0;
+            }
+        }
+        else
+        {
+            usleep(wait);
+        }
     }
     return 0;
 }

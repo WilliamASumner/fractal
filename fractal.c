@@ -1,10 +1,9 @@
-#include <string.h>
-#include <stdio.h>
-#include <stdlib.h>
-#include <unistd.h>
-#include <math.h>
-#include <complex.h>
-#include <termios.h>
+#include <string.h> // stringcmp
+#include <stdio.h> // all io
+#include <stdlib.h> // for abs
+#include <unistd.h> // for timing
+#include <math.h> // for fabs
+#include <complex.h> // complex numbers
 
 #define WHITE   "\x1b[37m"
 #define RED     "\x1b[31m"
@@ -15,7 +14,7 @@
 #define BLUE    "\x1b[34m"
 #define RESET   "\x1b[0m"
 
-#define ITERMAX 1000
+#define ITERMAX 256
 #define MINISPIRALS 0
 #define ELEPHANT 1
 #define TENTACLES 2
@@ -24,16 +23,30 @@
 #define RANDOM 5
 #define SPIRAL 6
 
-// usage for command line arguments ./fractal.out PLACE WIDTH HEIGHT ITERMAX
+    /* void write_ppm(int width, int height, int grid[177][47])
+    {
+        FILE * openFile;
+        openFile = fopen("output.ppm","w");
+        if(openFile != NULL)
+        {
+            fprintf(openFile,"P3\n%d %d\n%d\n",width,height,255); // print ppm header
+            for (int i = 0; i < height; i++)
+            {
+                for (int j = 0; j < width; j++)
+                {
+                    fprintf(openFile,"%d %d %d ",grid[i][j]%256,grid[i][j]%256,grid[i][j]%256);
+                }
+                fprintf(openFile,"\n");
+            }
+        }
+        else
+        {
+            printf("Error writing file");
+            exit(1);
+        }
+        printf("Successfully wrote output.ppm\n");
+    } */
 
-// (-0.71359190450499,-0.21478559053)     - Mini Spirals
-// (0.2730000018,-.00700000235)            -Elephant Valley
-// (0.1002,0.8383)                        - Double Scepter
-// (-0.274,0.482)                        - Quad Spiral
-// (0.75, 0.1)                             - Seahorse Valley
-// (0.088,0.654)                        - Triple Spiral
-// (1.108,0.230)                         - Scepter Varient
-// (0.1592,-1.0317) - Another Mandlebrot
 int main(int argc, char *argv[]) {
     double places[10][2];
     double ship[10][2];
@@ -45,6 +58,7 @@ int main(int argc, char *argv[]) {
     double aspectRatio = (double) lines/cols;
 
     int spot = CENTER,width=cols/1.2,height=lines/1.2, keyval = 0;
+    int grid[177][47] = { 0 }; // set to max dimensions of the terminal
     unsigned long wait = 50000;
     places[0][0] = -0.21478559053;
     places[0][1] = 0.71359190450499;
@@ -61,12 +75,13 @@ int main(int argc, char *argv[]) {
     places[6][0] = -2.052465525;
     places[6][1] = -0.007233462;
     char colors[7][9] = {WHITE,CYAN,BLUE,GREEN,YELLOW,RED,MAGENTA};
-    char syms[] = ".oO";//"+-.o0&^=z@ua";
-    int symLength= 3;
+    char syms[] = ".oO0+-#@:c";//"+-.o0&^=z@ua";
+    int symLength= 9;
     int itermax = ITERMAX;
     float startt = 8.0;
     float endt = 1e-14;
     double step = 0.9;
+    int iter = 0;
     double complex o = 0.0 + 0.0*I;
     int mode = 1;
     int interactive = 0;
@@ -133,9 +148,9 @@ int main(int argc, char *argv[]) {
         }
     }
 
-    puts("\033[2J");
+    puts("\033[2J"); // clear screen
     for (double t = startt; t >= endt; t*=step) {
-        puts("\033[1H");
+        puts("\033[1H"); // go back to the top
         for (int i = 0; i < height; i++) {
             for (int k = 0; k < abs(cols-width)/2;k++)
             {
@@ -144,7 +159,7 @@ int main(int argc, char *argv[]) {
             for (int j = 0; j < width;j++) {
                 double cReal = ((j - width*0.5)*t/width)*aspectRatio+places[spot][0];
                 double cImag = ((i - height*0.5)*t/height)*aspectRatio+places[spot][1];
-                int iter = 0;
+                iter = 0;
                 double complex z0 = 0.0 + 0.0 * I;
                 double complex c = cReal + cImag * I;
                 c += o; // add the origin for interactivity purposes
@@ -187,46 +202,58 @@ int main(int argc, char *argv[]) {
                             break;
                         }
                 }
-                if (iter < ITERMAX)
-                    putchar(syms[iter%symLength]);//33+iter%13
+                if (iter < itermax)
+                    putchar(syms[iter%symLength]);
                 else
                     putchar(' ');
+
+                grid[i][j] = iter; // save the iters
             }
             putchar('\n');
         }
         if (interactive)
         {
-            printf("                                   \r");
-            if (keyval == 32)
-                printf("\nlocation: %.9lf, %.9lf\n",creal(o)+places[spot][0],cimag(o)+places[spot][1]);
+            printf("\nlocation: %.9lf, %.9lf\nitermax: %d, scale %.8lf\n",creal(o)+places[spot][0],cimag(o)+places[spot][1],itermax,t);
             keyval = getchar(); // get the next character
             switch (keyval)
             {
-                case 97: // left
+                case 'a': // left
                     o -= t*0.1;
                     step = 1.0;
                     break;
-                case 119: // up
+                case 'w': // up
                     o -= t*0.1*I;
                     step = 1.0;
                     break;
-                case 100: // right
+                case 'd': // right
                     o += t*0.1;
                     step = 1.0;
                     break;
-                case 115: // down
+                case 's': // down
                     o += t*0.1*I;
                     step = 1.0;
                     break;
-                case 122: // z
+                case 'z': // zoom in
                     step = 0.5;
                     break;
-                case 120: // x
+                case 'x': // zoom out
                     step = 2;
                     break;
-                case 114:
+              /*  case 'f': // f
+                    write_ppm(width,height,grid);
+                    break; */
+                case 'r':
                     step = 1.0;
                     t = startt;
+                    break;
+                case EOF:
+                    return 0; // the program has been run on a file, quit
+                    break;
+                case 'i':
+                    itermax += 100;
+                    break;
+                case 'k':
+                    itermax -= 100;
                     break;
                 default:
                     step = 1.0;

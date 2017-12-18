@@ -14,7 +14,7 @@
 #define BLUE    "\x1b[34m"
 #define RESET   "\x1b[0m"
 
-#define ITERMAX 256
+#define ITERMAX 512
 #define MINISPIRALS 0
 #define ELEPHANT 1
 #define TENTACLES 2
@@ -23,29 +23,84 @@
 #define RANDOM 5
 #define SPIRAL 6
 
-    /* void write_ppm(int width, int height, int grid[177][47])
+void write_ppm(int width, int height, int grid[177][47], double places[10][2], int mode, int spot, double t, complex double o)
+{
+    FILE * openFile;
+    openFile = fopen("output.ppm","w");
+    if(openFile != NULL)
     {
-        FILE * openFile;
-        openFile = fopen("output.ppm","w");
-        if(openFile != NULL)
+        height *=2;
+
+        double aspectRatio = (double)height/width*0.5;
+        fprintf(openFile,"P3\n%d %d\n%d\n",width*4,height*4,255); // print ppm header
+        for (double i = 0.0; i < height; i+=0.25)
         {
-            fprintf(openFile,"P3\n%d %d\n%d\n",width,height,255); // print ppm header
-            for (int i = 0; i < height; i++)
+            for (double j = 0.0; j < width; j+=0.25)
             {
-                for (int j = 0; j < width; j++)
-                {
-                    fprintf(openFile,"%d %d %d ",grid[i][j]%256,grid[i][j]%256,grid[i][j]%256);
-                }
-                fprintf(openFile,"\n");
+                double cReal = ((j - width*0.5)*t/width)*aspectRatio+places[spot][0];
+                double cImag = ((i - height*0.5)*t/height)*aspectRatio+places[spot][1];
+                double complex c = cReal + cImag * I + o;
+                int iter = 0;
+
+                fprintf(openFile,"%d %d %d ",getOrbit(c,mode,1000)%256,0,0);
             }
+            fprintf(openFile,"\n");
         }
-        else
-        {
-            printf("Error writing file");
-            exit(1);
-        }
-        printf("Successfully wrote output.ppm\n");
-    } */
+        fclose(openFile);
+    }
+    else
+    {
+        printf("Error writing file");
+        exit(1);
+    }
+    printf("Successfully wrote output.ppm\n");
+}
+
+int getOrbit(double complex c, int mode, int itermax)
+{
+    int iter = 0;
+    double complex z0 = 0.0 + 0.0 * I;
+    switch (mode)
+    {
+        case 4: // random fractal
+            {
+                while (cabs(z0) < 2 && iter < itermax) {
+                    z0 = cimag(z0)*cimag(z0) + creal(z0)*I;
+                    z0 = z0*z0*z0 + c;
+                    iter++;
+                }
+                break;
+            }
+        case 3: // burning ship fractal
+            {
+                while (cabs(z0) < 2 && iter < itermax)
+                {
+                    z0 = fabs(creal(z0)) + fabs(cimag(z0))*I;
+                    z0 = z0*z0 + c;
+                    iter++;
+                }
+                break;
+            }
+        case 2: // rotated mandelbrot
+            {
+                while (cabs(z0) < 2 && iter < itermax)
+                {
+                    z0 = z0*z0 + c*(1+-0.8*I); // this rotates the mandlebrot
+                    iter++;
+                }
+                break;
+            }
+        default: // regular mandelbrot
+            {
+                while(cabs(z0)< 2 && iter < itermax) {
+                    z0 = (z0*z0) + c;
+                    iter++;
+                }
+                break;
+            }
+    }
+    return iter;
+}
 
 int main(int argc, char *argv[]) {
     double places[10][2];
@@ -58,7 +113,7 @@ int main(int argc, char *argv[]) {
     double aspectRatio = (double) lines/cols;
 
     int spot = CENTER,width=cols/1.2,height=lines/1.2, keyval = 0;
-    int grid[177][47] = { 0 }; // set to max dimensions of the terminal
+    int grid[177][47] = { 'z' }; // set to max dimensions of the terminal
     unsigned long wait = 50000;
     places[0][0] = -0.21478559053;
     places[0][1] = 0.71359190450499;
@@ -153,61 +208,18 @@ int main(int argc, char *argv[]) {
         puts("\033[1H"); // go back to the top
         for (int i = 0; i < height; i++) {
             for (int k = 0; k < abs(cols-width)/2;k++)
-            {
                 printf(" ");
-            }
             for (int j = 0; j < width;j++) {
                 double cReal = ((j - width*0.5)*t/width)*aspectRatio+places[spot][0];
                 double cImag = ((i - height*0.5)*t/height)*aspectRatio+places[spot][1];
-                iter = 0;
-                double complex z0 = 0.0 + 0.0 * I;
                 double complex c = cReal + cImag * I;
                 c += o; // add the origin for interactivity purposes
-                switch (mode)
-                {
-                    case 4: // random fractal
-                        {
-                            while (cabs(z0) < 2 && iter < itermax) {
-                                z0 = cimag(z0)*cimag(z0) + creal(z0)*I;
-                                z0 = z0*z0*z0 + c;
-                                iter++;
-                            }
-                            break;
-                        }
-                    case 3: // burning ship fractal
-                        {
-                            while (cabs(z0) < 2 && iter < itermax)
-                            {
-                                z0 = fabs(creal(z0)) + fabs(cimag(z0))*I;
-                                z0 = z0*z0 + c;
-                                iter++;
-                            }
-                            break;
-                        }
-                    case 2: // rotated mandelbrot
-                        {
-                            while (cabs(z0) < 2 && iter < itermax)
-                            {
-                                z0 = z0*z0 + c*(1+-0.8*I); // this rotates the mandlebrot
-                                iter++;
-                            }
-                            break;
-                        }
-                    default: // regular mandelbrot
-                        {
-                            while(cabs(z0)< 2 && iter < itermax) {
-                                z0 = (z0*z0) + c;
-                                iter++;
-                            }
-                            break;
-                        }
-                }
+                iter = getOrbit(c,mode,itermax);
+                grid[i][j] = iter;//syms[iter%symLength]; // save the iters
                 if (iter < itermax)
                     putchar(syms[iter%symLength]);
                 else
                     putchar(' ');
-
-                grid[i][j] = iter; // save the iters
             }
             putchar('\n');
         }
@@ -239,9 +251,10 @@ int main(int argc, char *argv[]) {
                 case 'x': // zoom out
                     step = 2;
                     break;
-              /*  case 'f': // f
-                    write_ppm(width,height,grid);
-                    break; */
+                case 'f': // f
+                    write_ppm(width,height,grid,places,mode,spot,t,o);
+                    step = 1.0;
+                    break;
                 case 'r':
                     step = 1.0;
                     t = startt;

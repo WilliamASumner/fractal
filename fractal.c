@@ -198,7 +198,7 @@ int main(int argc, char *argv[]) {
         {
             printf("                                   \r");
             if (keyval == 32)
-                printf("location: %.9lf, %.9lf\n",creal(o),cimag(o));
+                printf("\nlocation: %.9lf, %.9lf\n",creal(o)+places[spot][0],cimag(o)+places[spot][1]);
             keyval = getchar(); // get the next character
             switch (keyval)
             {
@@ -223,6 +223,10 @@ int main(int argc, char *argv[]) {
                     break;
                 case 120: // x
                     step = 2;
+                    break;
+                case 114:
+                    step = 1.0;
+                    t = startt;
                     break;
                 default:
                     step = 1.0;

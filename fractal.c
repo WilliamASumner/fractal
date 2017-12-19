@@ -23,37 +23,49 @@
 #define RANDOM 5
 #define SPIRAL 6
 
-void write_ppm(int width, int height, int grid[177][47], double places[10][2], int mode, int spot, double t, complex double o)
+int orbitColor(int itermax, int iter, int col)
 {
-    FILE * openFile;
-    openFile = fopen("output.ppm","w");
-    if(openFile != NULL)
+    // iter is the hue
+    // s = 1, l = 1
+    double h = (double)iter;
+    double l = 0.5;
+    double s = 1.0;
+    double sixth = 256/6.0;
+    double c = (1-fabs(2*l-1)) * s;
+    double x = c*(1-(int)fabs(h/6.0)%2-1);
+    double m = l - c/2.0;
+    switch (col)
     {
-        height *=2;
-
-        double aspectRatio = (double)height/width*0.5;
-        fprintf(openFile,"P3\n%d %d\n%d\n",width*4,height*4,255); // print ppm header
-        for (double i = 0.0; i < height; i+=0.25)
+        case 'r':
         {
-            for (double j = 0.0; j < width; j+=0.25)
-            {
-                double cReal = ((j - width*0.5)*t/width)*aspectRatio+places[spot][0];
-                double cImag = ((i - height*0.5)*t/height)*aspectRatio+places[spot][1];
-                double complex c = cReal + cImag * I + o;
-                int iter = 0;
+            if ((0<h && h<sixth) || (5*sixth < h && h < 6*sixth))
+                return c*255;
+            else if((sixth<=h && h<2*sixth) || (4*sixth <= h && h < 5*sixth))
+                return x*255;
+            else if ((2*sixth<=h<3*sixth) || (3*sixth <= h && h<4*sixth))
+                return 0;
 
-                fprintf(openFile,"%d %d %d ",getOrbit(c,mode,1000)%256,0,0);
-            }
-            fprintf(openFile,"\n");
         }
-        fclose(openFile);
+        case 'g':
+        {
+            if ((0<h && h<sixth) || (3*sixth <= h && h < 4*sixth))
+                return x*255;
+            else if ((sixth<=h && h<2*sixth) || (2*sixth <= h && h < 3*sixth))
+                return c*255;
+            else if ((4*sixth<=h && h<5*sixth) || (5*sixth<=h && h<6*sixth))
+                return 0;
+        }
+        case 'b':
+        {
+            if ((0<h && h<sixth) || (sixth <= h && h < 2*sixth))
+                return 0;
+            else if ((3*sixth<=h && h<4*sixth) || (4*sixth <= h && h < 5*sixth))
+                return c*255;
+            else if ((2*sixth<=h && h<3*sixth) || (5*sixth<=h && h<6*sixth))
+                return x*255;
+        }
     }
-    else
-    {
-        printf("Error writing file");
-        exit(1);
-    }
-    printf("Successfully wrote output.ppm\n");
+    return 0;
 }
 
 int getOrbit(double complex c, int mode, int itermax)
@@ -102,6 +114,39 @@ int getOrbit(double complex c, int mode, int itermax)
     return iter;
 }
 
+void write_ppm(int width, int height, double places[10][2], int mode, int spot, double t, complex double o, int itermax)
+{
+    FILE * openFile;
+    openFile = fopen("output.ppm","w");
+    if(openFile != NULL)
+    {
+        height *=2;
+
+        double aspectRatio = (double)height/width*0.5;
+        fprintf(openFile,"P3\n%d %d\n%d\n",width*8,height*8,255); // print ppm header
+        for (double i = 0.0; i < height; i+=0.125)
+        {
+            for (double j = 0.0; j < width; j+=0.125)
+            {
+                double cReal = ((j - width*0.5)*t/width)*aspectRatio+places[spot][0];
+                double cImag = ((i - height*0.5)*t/height)*aspectRatio+places[spot][1];
+                double complex c = cReal + cImag * I + o;
+                int iter = 0;
+
+                fprintf(openFile,"%d %d %d ",orbitColor(itermax,getOrbit(c,mode,500),'r'),orbitColor(itermax,getOrbit(c,mode,500),'g'),orbitColor(itermax,getOrbit(c,mode,500),'b'));
+            }
+            fprintf(openFile,"\n");
+        }
+        fclose(openFile);
+    }
+    else
+    {
+        printf("Error writing file");
+        exit(1);
+    }
+    printf("Successfully wrote output.ppm\n");
+}
+
 int main(int argc, char *argv[]) {
     double places[10][2];
     double ship[10][2];
@@ -113,7 +158,6 @@ int main(int argc, char *argv[]) {
     double aspectRatio = (double) lines/cols;
 
     int spot = CENTER,width=cols/1.2,height=lines/1.2, keyval = 0;
-    int grid[177][47] = { 'z' }; // set to max dimensions of the terminal
     unsigned long wait = 50000;
     places[0][0] = -0.21478559053;
     places[0][1] = 0.71359190450499;
@@ -215,7 +259,6 @@ int main(int argc, char *argv[]) {
                 double complex c = cReal + cImag * I;
                 c += o; // add the origin for interactivity purposes
                 iter = getOrbit(c,mode,itermax);
-                grid[i][j] = iter;//syms[iter%symLength]; // save the iters
                 if (iter < itermax)
                     putchar(syms[iter%symLength]);
                 else
@@ -252,7 +295,7 @@ int main(int argc, char *argv[]) {
                     step = 2;
                     break;
                 case 'f': // f
-                    write_ppm(width,height,grid,places,mode,spot,t,o);
+                    write_ppm(width,height,places,mode,spot,t,o,itermax);
                     step = 1.0;
                     break;
                 case 'r':

@@ -270,6 +270,7 @@ int main(int argc, char *argv[]) {
         {
             printf("\nlocation: %.9lf, %.9lf\nitermax: %d, scale %.8lf\n",creal(o)+places[spot][0],cimag(o)+places[spot][1],itermax,t);
             keyval = getchar(); // get the next character
+            printf("                             \r"); // to clear output message
             switch (keyval)
             {
                 case 'a': // left
@@ -301,10 +302,11 @@ int main(int argc, char *argv[]) {
                 case 'r':
                     step = 1.0;
                     t = startt;
+                    o = 0.0;
                     break;
+                case 'q':
                 case EOF:
                     return 0; // the program has been run on a file, quit
-                    break;
                 case 'i':
                     itermax += 100;
                     break;

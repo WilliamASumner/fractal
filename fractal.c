@@ -23,52 +23,81 @@
 #define RANDOM 5
 #define SPIRAL 6
 
-int orbitColor(int itermax, int iter, int col)
-{
-    // iter is the hue
-    // s = 1, l = 1
-    double h = (double)iter;
-    double l = 0.5;
-    double s = 1.0;
-    double sixth = 256/6.0;
-    double c = (1-fabs(2*l-1)) * s;
-    double x = c*(1-(int)fabs(h/6.0)%2-1);
-    double m = l - c/2.0;
-    switch (col)
-    {
-        case 'r':
-        {
-            if ((0<h && h<sixth) || (5*sixth < h && h < 6*sixth))
-                return c*255;
-            else if((sixth<=h && h<2*sixth) || (4*sixth <= h && h < 5*sixth))
-                return x*255;
-            else if ((2*sixth<=h<3*sixth) || (3*sixth <= h && h<4*sixth))
-                return 0;
+typedef struct Orbit {
+    int iterations;
+    complex double z;
+} orbit;
 
-        }
-        case 'g':
-        {
-            if ((0<h && h<sixth) || (3*sixth <= h && h < 4*sixth))
-                return x*255;
-            else if ((sixth<=h && h<2*sixth) || (2*sixth <= h && h < 3*sixth))
-                return c*255;
-            else if ((4*sixth<=h && h<5*sixth) || (5*sixth<=h && h<6*sixth))
-                return 0;
-        }
-        case 'b':
-        {
-            if ((0<h && h<sixth) || (sixth <= h && h < 2*sixth))
-                return 0;
-            else if ((3*sixth<=h && h<4*sixth) || (4*sixth <= h && h < 5*sixth))
-                return c*255;
-            else if ((2*sixth<=h && h<3*sixth) || (5*sixth<=h && h<6*sixth))
-                return x*255;
-        }
-    }
-    return 0;
+typedef struct Color {
+    unsigned int r,g,b;
+} col;
+
+col linear_interp(col col1, col col2, double val)
+{
+    double val2 = 1.0 - val;
+    col interp_col = { (val*col1.r+val2*col2.r),(val*col1.g+val2*col2.g),(val*col1.b+val2*col2.b)};
+    return interp_col;
 }
 
-int getOrbit(double complex c, int mode, int itermax)
+col hsvtorgb(int h, double s, double v)
+{
+    col hsvcolor =  { 0, 0, 0 };
+    long hh = (h < 360 && h >= 0) ? (long)(h/60) : (long)((h%360)/60);
+    double c = v*s;
+    double m = (v-c)*255;
+    double x = c*(1-labs(hh%2-1));
+    x *= 255;
+    c *= 255;
+    switch(hh)
+    {
+        case 0:
+            hsvcolor.r = c;
+            hsvcolor.g = x;
+            hsvcolor.b = 0;
+            break;
+        case 1:
+            hsvcolor.r = x;
+            hsvcolor.g = c;
+            hsvcolor.b = 0;
+            break;
+        case 2:
+            hsvcolor.r = 0;
+            hsvcolor.g = c;
+            hsvcolor.b = x;
+            break;
+        case 3:
+            hsvcolor.r = 0;
+            hsvcolor.g = x;
+            hsvcolor.b = c;
+            break;
+        case 4:
+            hsvcolor.r = x;
+            hsvcolor.g = 0;
+            hsvcolor.b = c;
+            break;
+        case 5:
+            hsvcolor.r = c;
+            hsvcolor.g = 0;
+            hsvcolor.b = x;
+            break;
+        default:
+            hsvcolor.r = 0.0;
+            hsvcolor.g = 0.0;
+            hsvcolor.b = 0.0;
+    }
+    hsvcolor.r += m;
+    hsvcolor.g += m;
+    hsvcolor.b += m;
+    return hsvcolor;
+}
+
+col orbitColor(int itermax, double iter, double t)
+{
+    return hsvtorgb(iter/itermax*360,0.7,0.75);
+}
+
+
+orbit getOrbit(double complex c, int mode, int itermax)
 {
     int iter = 0;
     double complex z0 = 0.0 + 0.0 * I;
@@ -97,7 +126,7 @@ int getOrbit(double complex c, int mode, int itermax)
             {
                 while (cabs(z0) < 2 && iter < itermax)
                 {
-                    z0 = z0*z0 + c*(1+-0.8*I); // this rotates the mandlebrot
+                    z0 = z0*z0 + c*(0-1.0*I); // this rotates the mandlebrot
                     iter++;
                 }
                 break;
@@ -111,10 +140,11 @@ int getOrbit(double complex c, int mode, int itermax)
                 break;
             }
     }
-    return iter;
+    orbit someOrbit = { iter, z0 };
+    return someOrbit;
 }
 
-void write_ppm(int width, int height, double places[10][2], int mode, int spot, double t, complex double o, int itermax)
+void write_ppm(int width, int height, double places[10][2], int mode, int spot, double t, complex double o, int itermax, int hueshift)
 {
     FILE * openFile;
     openFile = fopen("output.ppm","w");
@@ -131,9 +161,15 @@ void write_ppm(int width, int height, double places[10][2], int mode, int spot, 
                 double cReal = ((j - width*0.5)*t/width)*aspectRatio+places[spot][0];
                 double cImag = ((i - height*0.5)*t/height)*aspectRatio+places[spot][1];
                 double complex c = cReal + cImag * I + o;
-                int iter = 0;
-
-                fprintf(openFile,"%d %d %d ",orbitColor(itermax,getOrbit(c,mode,500),'r'),orbitColor(itermax,getOrbit(c,mode,500),'g'),orbitColor(itermax,getOrbit(c,mode,500),'b'));
+                orbit result = getOrbit(c,mode,itermax);
+                result.iterations = (result.iterations + hueshift)%itermax;
+                double log_zn = log(pow(cabs(result.z),2.0))/2;
+                double nu = log( log_zn / log(2) ) / log(2);
+                col color1 = orbitColor(itermax,result.iterations,t);
+                col color2 = orbitColor(itermax,(result.iterations <= itermax-1) ? result.iterations+1 : result.iterations, t);
+                col color3 = orbitColor(itermax,(result.iterations >= 1) ? result.iterations-1 : result.iterations, t);
+                col color12 = linear_interp(color1,color2,nu);
+                fprintf(openFile,"%d %d %d ",color12.r,color12.g,color12.b);
             }
             fprintf(openFile,"\n");
         }
@@ -181,6 +217,7 @@ int main(int argc, char *argv[]) {
     float endt = 1e-14;
     double step = 0.9;
     int iter = 0;
+    int hueshift = 0;
     double complex o = 0.0 + 0.0*I;
     int mode = 1;
     int interactive = 0;
@@ -258,7 +295,8 @@ int main(int argc, char *argv[]) {
                 double cImag = ((i - height*0.5)*t/height)*aspectRatio+places[spot][1];
                 double complex c = cReal + cImag * I;
                 c += o; // add the origin for interactivity purposes
-                iter = getOrbit(c,mode,itermax);
+                orbit result = getOrbit(c,mode,itermax);
+                iter = result.iterations;
                 if (iter < itermax)
                     putchar(syms[iter%symLength]);
                 else
@@ -268,25 +306,28 @@ int main(int argc, char *argv[]) {
         }
         if (interactive)
         {
-            printf("\nlocation: %.9lf, %.9lf\nitermax: %d, scale %.8lf\n",creal(o)+places[spot][0],cimag(o)+places[spot][1],itermax,t);
+            printf("\n                                                                                                                               \r");
+            printf("location: %.9lf, %.9lf",creal(o)+places[spot][0],cimag(o)+places[spot][1]);
+            printf("\n                                                                                                                               \r");
+            printf("itermax: %d, scale %.8lf, hue shift: %d\n",itermax,t,hueshift);
             keyval = getchar(); // get the next character
             printf("                             \r"); // to clear output message
             switch (keyval)
             {
                 case 'a': // left
-                    o -= t*0.1;
+                    o -= t*0.05;
                     step = 1.0;
                     break;
                 case 'w': // up
-                    o -= t*0.1*I;
+                    o -= t*0.05*I;
                     step = 1.0;
                     break;
                 case 'd': // right
-                    o += t*0.1;
+                    o += t*0.05;
                     step = 1.0;
                     break;
                 case 's': // down
-                    o += t*0.1*I;
+                    o += t*0.05*I;
                     step = 1.0;
                     break;
                 case 'z': // zoom in
@@ -295,8 +336,8 @@ int main(int argc, char *argv[]) {
                 case 'x': // zoom out
                     step = 2;
                     break;
-                case 'f': // f
-                    write_ppm(width,height,places,mode,spot,t,o,itermax);
+                case 'f': // write file
+                    write_ppm(width,height,places,mode,spot,t,o,itermax,hueshift);
                     step = 1.0;
                     break;
                 case 'r':
@@ -309,9 +350,19 @@ int main(int argc, char *argv[]) {
                     return 0; // the program has been run on a file, quit
                 case 'i':
                     itermax += 100;
+                    step = 1.0;
                     break;
                 case 'k':
                     itermax -= 100;
+                    step = 1.0;
+                    break;
+                case '[': // change hue shift
+                    hueshift += 15;
+                    step = 1.0;
+                    break;
+                case ']':
+                    hueshift -= 15;
+                    step = 1.0;
                     break;
                 default:
                     step = 1.0;

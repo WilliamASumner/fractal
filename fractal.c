@@ -14,7 +14,7 @@
 #define BLUE    "\x1b[34m"
 #define RESET   "\x1b[0m"
 
-#define ITERMAX 512
+#define ITERMAX 800
 #define MINISPIRALS 0
 #define ELEPHANT 1
 #define TENTACLES 2
@@ -32,6 +32,9 @@ typedef struct Color {
     unsigned int r,g,b;
 } col;
 
+double max( double x, double y) {
+    return (x > y) ? x : y;
+}
 col linear_interp(col col1, col col2, double val)
 {
     double val2 = 1.0 - val;
@@ -93,7 +96,7 @@ col hsvtorgb(int h, double s, double v)
 
 col orbitColor(int itermax, double iter, double t)
 {
-    return hsvtorgb(iter/itermax*360,0.7,0.75);
+    return hsvtorgb(iter/itermax*360,0.7,max(1-sin(iter/itermax), 0.3));
 }
 
 
@@ -165,10 +168,13 @@ void write_ppm(int width, int height, double places[10][2], int mode, int spot, 
                 result.iterations = (result.iterations + hueshift)%itermax;
                 double log_zn = log(pow(cabs(result.z),2.0))/2;
                 double nu = log( log_zn / log(2) ) / log(2);
-                col color1 = orbitColor(itermax,result.iterations,t);
-                col color2 = orbitColor(itermax,(result.iterations <= itermax-1) ? result.iterations+1 : result.iterations, t);
-                col color3 = orbitColor(itermax,(result.iterations >= 1) ? result.iterations-1 : result.iterations, t);
-                col color12 = linear_interp(color1,color2,nu);
+                col color12 = {0,0,0};
+                if(result.iterations != 0)
+                {
+                    col color1 = orbitColor(itermax,result.iterations,t);
+                    col color2 = orbitColor(itermax,(result.iterations <= itermax-1) ? result.iterations+1 : result.iterations, t);
+                    color12 = linear_interp(color1,color2,nu);
+                }
                 fprintf(openFile,"%d %d %d ",color12.r,color12.g,color12.b);
             }
             fprintf(openFile,"\n");
@@ -185,7 +191,6 @@ void write_ppm(int width, int height, double places[10][2], int mode, int spot, 
 
 int main(int argc, char *argv[]) {
     double places[10][2];
-    double ship[10][2];
     FILE *linescols;
     int lines = 0, cols = 0;
     linescols = popen("tput cols;tput lines","r");
@@ -209,7 +214,7 @@ int main(int argc, char *argv[]) {
     places[5][1] = 0.95;
     places[6][0] = -2.052465525;
     places[6][1] = -0.007233462;
-    char colors[7][9] = {WHITE,CYAN,BLUE,GREEN,YELLOW,RED,MAGENTA};
+    //char colors[7][9] = {WHITE,CYAN,BLUE,GREEN,YELLOW,RED,MAGENTA};
     char syms[] = ".oO0+-#@:c";//"+-.o0&^=z@ua";
     int symLength= 9;
     int itermax = ITERMAX;

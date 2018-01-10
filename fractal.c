@@ -171,8 +171,8 @@ void write_ppm(int width, int height, double places[10][2], int mode, int spot, 
                 col color12 = {0,0,0};
                 if(result.iterations != 0)
                 {
-                    col color1 = orbitColor(itermax,result.iterations,t);
-                    col color2 = orbitColor(itermax,(result.iterations <= itermax-1) ? result.iterations+1 : result.iterations, t);
+                    col color1 = orbitColor(itermax,result.iterations);
+                    col color2 = orbitColor(itermax,(result.iterations <= itermax-1) ? result.iterations+1 : result.iterations);
                     color12 = linear_interp(color1,color2,nu);
                 }
                 fprintf(openFile,"%d %d %d ",color12.r,color12.g,color12.b);

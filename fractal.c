@@ -1,9 +1,9 @@
-#include <string.h> // stringcmp
-#include <stdio.h> // all io
-#include <stdlib.h> // for abs
-#include <unistd.h> // for timing
-#include <math.h> // for fabs
-#include <complex.h> // complex numbers
+#include <string.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <unistd.h>
+#include <math.h>
+#include <complex.h>
 
 #define WHITE   "\x1b[37m"
 #define RED     "\x1b[31m"
@@ -94,7 +94,7 @@ col hsvtorgb(int h, double s, double v)
     return hsvcolor;
 }
 
-col orbitColor(int itermax, double iter, double t)
+col orbitColor(int itermax, double iter)
 {
     return hsvtorgb(iter/itermax*360,0.7,max(1-sin(iter/itermax), 0.3));
 }

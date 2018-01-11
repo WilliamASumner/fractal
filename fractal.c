@@ -106,6 +106,14 @@ orbit getOrbit(double complex c, int mode, int itermax)
     double complex z0 = 0.0 + 0.0 * I;
     switch (mode)
     {
+        case 5: // julia fractal
+            z0 = c; // c and z get flipped for julia sets that aren't mandelbrot
+            c = 0.1 + 0.7*I;
+            while(cabs(z0) < 2 && iter < itermax) {
+                z0 = z0*z0 + c;
+                iter++;
+            }
+            break;
         case 4: // random fractal
             {
                 while (cabs(z0) < 2 && iter < itermax) {
@@ -274,6 +282,10 @@ int main(int argc, char *argv[]) {
             else if (strcmp(argv[1],"random")==0) { // a random fractal I came up with
                 spot = RANDOM;
                 mode = 4;
+            }
+            else if (strcmp(argv[1],"julia")==0) { // a random fractal I came up with
+                spot = MINISPIRALS;
+                mode = 5;
             }
             else {
                 printf("usage: ./prog.out fractal [location]\n");

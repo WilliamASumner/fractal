@@ -42,16 +42,17 @@ col linear_interp(col col1, col col2, double val)
     return interp_col;
 }
 
-col hsvtorgb(int h, double s, double v)
+col hsvtorgb(double h, double s, double v)
 {
     col hsvcolor =  { 0, 0, 0 };
-    long hh = (h < 360 && h >= 0) ? (long)(h/60) : (long)((h%360)/60);
+    double hh = (h < 360 && h >= 0) ? (double)(h/60) : (double)((fmod(h,360))/60);
     double c = v*s;
     double m = (v-c)*255;
-    double x = c*(1-labs(hh%2-1));
+    double x = c*(1-fabs(fmod(hh,2)-1));
     x *= 255;
     c *= 255;
-    switch(hh)
+    long hhh = (long)hh;
+    switch(hhh)
     {
         case 0:
             hsvcolor.r = c;
@@ -96,7 +97,7 @@ col hsvtorgb(int h, double s, double v)
 
 col orbitColor(int itermax, double iter)
 {
-    return hsvtorgb(iter/itermax*360,0.7,max(1-sin(iter/itermax), 0.3));
+    return hsvtorgb((double)(iter/itermax)*360,0.7,max(1-sin(iter/itermax), 0.3));
 }
 
 

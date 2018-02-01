@@ -24,7 +24,7 @@
 #define SPIRAL 6
 
 typedef struct Orbit {
-    int iterations;
+    double iterations;
     complex double z;
 } orbit;
 
@@ -97,11 +97,11 @@ col hsvtorgb(double h, double s, double v)
 
 col orbitColor(int itermax, double iter)
 {
-    return hsvtorgb((double)(iter/itermax)*360,0.7,max(1-sin(iter/itermax), 0.3));
+    return hsvtorgb((double)(iter/itermax)*360,0.7,cos(iter/itermax));
 }
 
 
-orbit getOrbit(double complex c, int mode, int itermax)
+orbit getOrbit(double complex c, int mode, int itermax, double t)
 {
     int iter = 0;
     double complex z0 = 0.0 + 0.0 * I;
@@ -145,6 +145,7 @@ orbit getOrbit(double complex c, int mode, int itermax)
             }
         default: // regular mandelbrot
             {
+                z0 = c;
                 while(cabs(z0)< 2 && iter < itermax) {
                     z0 = (z0*z0) + c;
                     iter++;
@@ -173,8 +174,8 @@ void write_ppm(int width, int height, double places[10][2], int mode, int spot, 
                 double cReal = ((j - width*0.5)*t/width)*aspectRatio+places[spot][0];
                 double cImag = ((i - height*0.5)*t/height)*aspectRatio+places[spot][1];
                 double complex c = cReal + cImag * I + o;
-                orbit result = getOrbit(c,mode,itermax);
-                result.iterations = (result.iterations + hueshift)%itermax;
+                orbit result = getOrbit(c,mode,itermax,t);
+                result.iterations = fmod(result.iterations + hueshift,itermax);
                 double log_zn = log(pow(cabs(result.z),2.0))/2;
                 double nu = log( log_zn / log(2) ) / log(2);
                 col color12 = {0,0,0};
@@ -313,7 +314,7 @@ int main(int argc, char *argv[]) {
                 double cImag = ((i - height*0.5)*t/height)*aspectRatio+places[spot][1];
                 double complex c = cReal + cImag * I;
                 c += o; // add the origin for interactivity purposes
-                orbit result = getOrbit(c,mode,itermax);
+                orbit result = getOrbit(c,mode,itermax,t);
                 iter = result.iterations;
                 if (iter < itermax)
                     putchar(syms[iter%symLength]);
